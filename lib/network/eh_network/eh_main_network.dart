@@ -604,12 +604,13 @@ class EhNetwork {
           }
         }
       } else {
-        var imgDom = document.querySelectorAll("div.gdtl > a > img");
-        for (var i in imgDom) {
-          if (i.attributes["src"] != null) {
-            thumbnailUrls.add(i.attributes["src"]!);
-          }
-        }
+        var pattern = RegExp(r'url\((.*?)\)');
+        thumbnailUrls.addAll(
+            document.querySelectorAll("div#gdt > a > div").map((e){
+              var match = pattern.firstMatch(e.attributes["style"] ?? "");
+              return match!.group(1)!;
+            })
+        );
         var totalPages = document.querySelectorAll("table.ptt > tbody > tr > td > a")
             .where((element) => element.text.isNum).last.text;
         auth["thumbnailKey"] = "large thumbnail: $totalPages";
@@ -707,6 +708,10 @@ class EhNetwork {
       for (var link in links) {
         urls_.add(link.attributes["href"]!);
       }
+      links = temp.querySelectorAll("div#gdt > a");
+      for (var link in links) {
+        urls_.add(link.attributes["href"]!);
+      }
       return Res(urls_);
     } catch (e, s) {
       LogManager.addLog(LogLevel.error, "Data Analysis", "$e\n$s");
@@ -765,12 +770,18 @@ class EhNetwork {
   }
 
   Future<Res<List<String>>> getLargeThumbnails(Gallery gallery, int page) async{
-    var res = await request("${gallery.link}?p=$page");
+    var res = await request("${gallery.link}?p=${page - 1}");
     if(res.error){
       return Res.fromErrorRes(res);
     }
     var document = parse(res.data);
-    return Res(document.querySelectorAll("div.gdtl > a > img").map((e) => e.attributes["src"] ?? "").toList());
+    var pattern = RegExp(r'url\((.*?)\)');
+    return Res(
+      document.querySelectorAll("div#gdt > a > div").map((e){
+        var match = pattern.firstMatch(e.attributes["style"] ?? "");
+        return match!.group(1)!;
+      }).toList()
+    );
   }
 
   List<String> _splitKeyword(String keyword) {
